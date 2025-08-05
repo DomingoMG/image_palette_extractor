@@ -1,5 +1,5 @@
 name: image_palette_extractor
-description: "A new Flutter package project."
+description: "Flutter plugin to extract the dominant color or a color palette from an image. Perfect for dynamic interfaces such as Spotify."
 version: 0.0.1
 homepage:
 
