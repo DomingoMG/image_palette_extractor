@@ -7,7 +7,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  image_palette_extractor: ^1.0.0
+  image_palette_extractor: ^0.0.1
 ```
 > Update the path accordingly if publishing to pub.dev.
 
