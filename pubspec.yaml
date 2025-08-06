@@ -1,6 +1,6 @@
 name: image_palette_extractor
 description: "Flutter plugin to extract the dominant color or a color palette from an image. Perfect for dynamic interfaces such as Spotify."
-version: 1.0.0
+version: 1.0.0+1
 homepage: https://github.com/DomingoMG/image_palette_extractor
 repository: https://github.com/DomingoMG/image_palette_extractor
 issue_tracker: https://github.com/DomingoMG/image_palette_extractor/issues
