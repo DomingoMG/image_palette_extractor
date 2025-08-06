@@ -8,7 +8,7 @@ Add this to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  image_palette_extractor: ^1.0.0
+  image_palette_extractor: ^1.0.1
 ```
 
 ---
@@ -31,6 +31,7 @@ dependencies:
 | `extractPaletteFromUiImage`                | Extracts a palette from a `ui.Image`                                 |
 | `extractDominantColorFromUiImageRegion`    | Extracts dominant color from a rectangular region of a `ui.Image`    |
 | `extractPaletteFromUiImageRegion`          | Extracts palette from a rectangular region of a `ui.Image`           |
+| `extractDominantColorFromPixels`           | Extracts dominant color from raw RGBA pixel data (e.g. for isolates) |
 
 ---
 ## ✨ Example usage
@@ -67,6 +68,28 @@ final palette = await extractor.extractPaletteFromFile(file, count: 5);
 final region = Rect.fromLTWH(10, 10, 100, 100);
 final dominant = await extractor.extractDominantColorFromUiImageRegion(myUiImage, region);
 final palette = await extractor.extractPaletteFromUiImageRegion(myUiImage, region, count: 4);
+```
+
+---
+### ⚡️ From raw pixels (for isolate use)
+```dart
+final byteData = await uiImage.toByteData(format: ui.ImageByteFormat.rawRgba);
+if (byteData != null) {
+  final pixels = byteData.buffer.asUint8List();
+
+  final color = await Isolate.run(() async {
+    final extractor = ImagePaletteExtractor();
+    return await extractor.extractDominantColorFromPixels(
+      pixels,
+      uiImage.width,
+      uiImage.height,
+    );
+  });
+
+  if (color != null) {
+    print('Dominant (isolate): ${color.red}, ${color.green}, ${color.blue}');
+  }
+}
 ```
 
 ---
