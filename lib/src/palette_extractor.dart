@@ -1,86 +1,150 @@
-library;
-
-import 'dart:typed_data';
+import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:image/image.dart' as img;
-import 'package:http/http.dart' as http;
+import 'package:image_palette_extractor/src/core/core.dart';
+import 'package:image_palette_extractor/src/utils/ui_image_utils.dart';
 
-/// Loads an image from a network URL and decodes it into an [img.Image].
-Future<img.Image?> loadImageFromUrl(String imageUrl) async {
-  try {
-    final response = await http.get(Uri.parse(imageUrl));
-    if (response.statusCode == 200) {
-      return img.decodeImage(Uint8List.fromList(response.bodyBytes));
-    }
-  } catch (_) {
-    // Handle or log error
-  }
-  return null;
-}
+/// Provides high-level APIs to extract dominant colors and color palettes from images.
+///
+/// This class supports different image sources such as:
+/// - Remote images from a URL
+/// - Local image files
+/// - In-memory [ui.Image] objects (e.g., decoded with Flutter's `ImageProvider`)
+///
+/// It is designed to help developers build dynamic and adaptive UIs based on image content,
+/// for use cases such as media players, photo editors, theming, or artistic visualizations.
+class ImagePaletteExtractor {
+  final ImageLoader _loader;
+  final ColorAnalyzer _analyzer;
 
-/// Extracts the dominant color from a decoded [img.Image].
-Color getDominantColor(img.Image image) {
-  final Map<int, int> colorCount = {};
+  /// Creates a new instance of [ImagePaletteExtractor].
+  ///
+  /// You may optionally provide custom [ImageLoader] and [ColorAnalyzer] implementations
+  /// for testing or advanced use cases.
+  const ImagePaletteExtractor({
+    ImageLoader loader = const ImageLoader(),
+    ColorAnalyzer analyzer = const ColorAnalyzer(),
+  }) : _loader = loader,
+       _analyzer = analyzer;
 
-  for (int y = 0; y < image.height; y++) {
-    for (int x = 0; x < image.width; x++) {
-      final pixel = image.getPixel(x, y);
-      final r = pixel.r.toInt();
-      final g = pixel.g.toInt();
-      final b = pixel.b.toInt();
-      final pixelValue = (r << 16) | (g << 8) | b;
-      colorCount[pixelValue] = (colorCount[pixelValue] ?? 0) + 1;
-    }
-  }
+  // ────────────────────────────────────────────────────────────────
+  // 🌐 NETWORK IMAGE METHODS
+  // ────────────────────────────────────────────────────────────────
 
-  final sorted = colorCount.entries.toList()
-    ..sort((a, b) => b.value.compareTo(a.value));
-
-  final mostCommon = sorted.first.key;
-
-  final r = (mostCommon >> 16) & 0xFF;
-  final g = (mostCommon >> 8) & 0xFF;
-  final b = mostCommon & 0xFF;
-
-  return Color.fromARGB(255, r, g, b);
-}
-
-/// Extracts the dominant color from a network image URL.
-Future<Color?> extractDominantColorFromUrl(String imageUrl) async {
-  final image = await loadImageFromUrl(imageUrl);
-  if (image == null) return null;
-  return getDominantColor(image);
-}
-
-/// Extracts a list of the most common colors in the image (used for gradients).
-Future<List<Color>> extractPaletteFromUrl(
-  String imageUrl, {
-  int count = 3,
-}) async {
-  final image = await loadImageFromUrl(imageUrl);
-  if (image == null) return [];
-
-  final Map<int, int> colorCount = {};
-
-  for (int y = 0; y < image.height; y++) {
-    for (int x = 0; x < image.width; x++) {
-      final pixel = image.getPixel(x, y);
-      final r = pixel.r.toInt();
-      final g = pixel.g.toInt();
-      final b = pixel.b.toInt();
-      final pixelValue = (r << 16) | (g << 8) | b;
-      colorCount[pixelValue] = (colorCount[pixelValue] ?? 0) + 1;
-    }
+  /// Extracts the dominant color from an image fetched from a [url].
+  ///
+  /// Returns `null` if the image could not be loaded or decoded.
+  ///
+  /// Example:
+  /// ```dart
+  /// final color = await extractor.extractDominantColorFromUrl('https://example.com/image.jpg');
+  /// ```
+  Future<Color?> extractDominantColorFromUrl(String url) async {
+    final image = await _loader.loadFromUrl(url);
+    if (image == null) return null;
+    return _analyzer.getDominantColor(image);
   }
 
-  final sorted = colorCount.entries.toList()
-    ..sort((a, b) => b.value.compareTo(a.value));
+  /// Extracts a palette of dominant colors from an image fetched from a [url].
+  ///
+  /// The [count] parameter controls the number of dominant colors to return.
+  /// Defaults to 3.
+  ///
+  /// Returns an empty list if the image could not be loaded or decoded.
+  Future<List<Color>> extractPaletteFromUrl(String url, {int count = 3}) async {
+    final image = await _loader.loadFromUrl(url);
+    if (image == null) return [];
+    return _analyzer.getPalette(image, count: count);
+  }
 
-  return sorted.take(count).map((entry) {
-    final value = entry.key;
-    final r = (value >> 16) & 0xFF;
-    final g = (value >> 8) & 0xFF;
-    final b = value & 0xFF;
-    return Color.fromARGB(255, r, g, b);
-  }).toList();
+  // ────────────────────────────────────────────────────────────────
+  // 📁 FILE IMAGE METHODS
+  // ────────────────────────────────────────────────────────────────
+
+  /// Extracts the dominant color from a local image [file].
+  ///
+  /// Returns `null` if the file is invalid or unreadable.
+  ///
+  /// Example:
+  /// ```dart
+  /// final color = await extractor.extractDominantColorFromFile(File('image.jpg'));
+  /// ```
+  Future<Color?> extractDominantColorFromFile(File file) async {
+    final image = await _loader.loadFromFile(file);
+    if (image == null) return null;
+    return _analyzer.getDominantColor(image);
+  }
+
+  /// Extracts a color palette from a local image [file].
+  ///
+  /// The [count] parameter defines how many dominant colors to return. Defaults to 3.
+  ///
+  /// Returns an empty list if the file is invalid or unreadable.
+  Future<List<Color>> extractPaletteFromFile(File file, {int count = 3}) async {
+    final image = await _loader.loadFromFile(file);
+    if (image == null) return [];
+    return _analyzer.getPalette(image, count: count);
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  // 🖼️ FLUTTER UI.IMAGE METHODS
+  // ────────────────────────────────────────────────────────────────
+
+  /// Extracts the dominant color from a decoded [ui.Image].
+  ///
+  /// Returns `null` if the conversion to a processable format fails.
+  Future<Color?> extractDominantColorFromUiImage(ui.Image uiImage) async {
+    final image = await convertUiImageToImgImage(uiImage);
+    if (image == null) return null;
+    return _analyzer.getDominantColor(image);
+  }
+
+  /// Extracts a palette of dominant colors from a [ui.Image].
+  ///
+  /// The [count] parameter controls the number of colors to return. Defaults to 3.
+  ///
+  /// Returns an empty list if the conversion fails.
+  Future<List<Color>> extractPaletteFromUiImage(
+    ui.Image uiImage, {
+    int count = 3,
+  }) async {
+    final image = await convertUiImageToImgImage(uiImage);
+    if (image == null) return [];
+    return _analyzer.getPalette(image, count: count);
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  // 🔲 UI.IMAGE REGION METHODS
+  // ────────────────────────────────────────────────────────────────
+
+  /// Extracts the dominant color from a specific [region] of a [ui.Image].
+  ///
+  /// This is useful for analyzing focal areas like thumbnails or avatars.
+  ///
+  /// Returns `null` if the image could not be converted or cropped.
+  Future<Color?> extractDominantColorFromUiImageRegion(
+    ui.Image uiImage,
+    Rect region,
+  ) async {
+    final image = await convertUiImageToImgImage(uiImage);
+    if (image == null) return null;
+    final cropped = _analyzer.cropImage(image, region);
+    return _analyzer.getDominantColor(cropped);
+  }
+
+  /// Extracts a palette of dominant colors from a specific [region] of a [ui.Image].
+  ///
+  /// The [count] parameter defines how many colors to return. Defaults to 3.
+  ///
+  /// Returns an empty list if the image could not be converted or cropped.
+  Future<List<Color>> extractPaletteFromUiImageRegion(
+    ui.Image uiImage,
+    Rect region, {
+    int count = 3,
+  }) async {
+    final image = await convertUiImageToImgImage(uiImage);
+    if (image == null) return [];
+    final cropped = _analyzer.cropImage(image, region);
+    return _analyzer.getPalette(cropped, count: count);
+  }
 }
