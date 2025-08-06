@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:image_palette_extractor/src/core/core.dart';
 import 'package:image_palette_extractor/src/utils/ui_image_utils.dart';
+import 'package:image/image.dart' as img;
 
 /// Provides high-level APIs to extract dominant colors and color palettes from images.
 ///
@@ -146,5 +148,47 @@ class ImagePaletteExtractor {
     if (image == null) return [];
     final cropped = _analyzer.cropImage(image, region);
     return _analyzer.getPalette(cropped, count: count);
+  }
+
+  /// Extracts the dominant color from raw pixel data.
+  ///
+  /// This method is optimized for performance and isolate compatibility,
+  /// allowing image analysis without blocking the UI thread.
+  ///
+  /// Use this method when you already have raw RGBA bytes (e.g., from a `ui.Image`
+  /// converted via `toByteData`) and want to extract the dominant color without relying
+  /// on `ui.Image` directly (which cannot be transferred between isolates).
+  ///
+  /// The input [pixels] must be in RGBA byte order and contain exactly
+  /// `width * height * 4` bytes.
+  ///
+  /// Example:
+  /// ```dart
+  /// final pixels = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+  /// final color = await extractor.extractDominantColorFromPixels(
+  ///   pixels.buffer.asUint8List(),
+  ///   image.width,
+  ///   image.height,
+  /// );
+  /// ```
+  ///
+  /// - [pixels]: Raw RGBA pixel data as a `Uint8List`.
+  /// - [width]: Width of the original image.
+  /// - [height]: Height of the original image.
+  ///
+  /// Returns the most dominant [Color] found in the image, or `null` if processing fails.
+  Future<Color?> extractDominantColorFromPixels(
+    Uint8List pixels,
+    int width,
+    int height,
+  ) async {
+    final imgImage = img.Image.fromBytes(
+      width: width,
+      height: height,
+      bytes: pixels.buffer,
+      order: img.ChannelOrder.rgba,
+      numChannels: 4,
+    );
+    return _analyzer.getDominantColor(imgImage);
   }
 }
