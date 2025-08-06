@@ -1,3 +1,6 @@
+## 1.0.0+1
+- Readme updated.
+
 ## 1.0.0
 - 🚀 Stable release with extended functionality.
 - ✅ Added support for extracting dominant color and palette from:
