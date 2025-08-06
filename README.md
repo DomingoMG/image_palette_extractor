@@ -1,9 +1,10 @@
 # 🎨 image_palette_extractor
-A Flutter plugin for extracting the dominant color or a color palette from an image, ideal for dynamic UI effects similar to Spotify or Apple Music.
+A Flutter plugin for extracting the dominant color or a color palette from an image.  
+It supports dynamic UI effects like those seen in Spotify, Apple Music, and other media-rich apps.
 
 ---
 ## 🚀 Installation
-Add to your `pubspec.yaml`:
+Add this to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
@@ -20,17 +21,23 @@ dependencies:
 
 ---
 ## 🧠 Features
-| Method                          | Description                                      |
-|---------------------------------|--------------------------------------------------|
-| `extractDominantColorFromUrl`   | Returns the most frequent color from an image   |
-| `extractPaletteFromUrl`         | Returns a list of dominant colors for gradients |
+| Method                                     | Description                                                           |
+|--------------------------------------------|-----------------------------------------------------------------------|
+| `extractDominantColorFromUrl`              | Extracts the most frequent color from a remote image                 |
+| `extractPaletteFromUrl`                    | Extracts a palette of dominant colors from a remote image            |
+| `extractDominantColorFromFile`             | Extracts the dominant color from a local image file                  |
+| `extractPaletteFromFile`                   | Extracts a color palette from a local image file                     |
+| `extractDominantColorFromUiImage`          | Extracts dominant color from an in-memory `ui.Image`                 |
+| `extractPaletteFromUiImage`                | Extracts a palette from a `ui.Image`                                 |
+| `extractDominantColorFromUiImageRegion`    | Extracts dominant color from a rectangular region of a `ui.Image`    |
+| `extractPaletteFromUiImageRegion`          | Extracts palette from a rectangular region of a `ui.Image`           |
 
 ---
 ## ✨ Example usage
-
-### 🎯 Dominant color
+### 🎯 Dominant color from URL
 ```dart
-final color = await extractDominantColorFromUrl('https://example.com/image.jpg');
+final extractor = ImagePaletteExtractor();
+final color = await extractor.extractDominantColorFromUrl('https://example.com/image.jpg');
 
 if (color != null) {
   print('Dominant: ${color.red}, ${color.green}, ${color.blue}');
@@ -38,17 +45,32 @@ if (color != null) {
 ```
 
 ---
-### 🎨 Color palette
+### 🎨 Color palette from URL
 ```dart
-final palette = await extractPaletteFromUrl('https://example.com/image.jpg', count: 3);
-
+final palette = await extractor.extractPaletteFromUrl('https://example.com/image.jpg', count: 3);
 for (final color in palette) {
   print('Color: ${color.value.toRadixString(16)}');
 }
 ```
 
 ---
-### 🖌️ Apply as gradient background
+### 📁 From file
+```dart
+final file = File('/path/to/image.jpg');
+final dominant = await extractor.extractDominantColorFromFile(file);
+final palette = await extractor.extractPaletteFromFile(file, count: 5);
+```
+
+---
+### 🖼️ From ui.Image region
+```dart
+final region = Rect.fromLTWH(10, 10, 100, 100);
+final dominant = await extractor.extractDominantColorFromUiImageRegion(myUiImage, region);
+final palette = await extractor.extractPaletteFromUiImageRegion(myUiImage, region, count: 4);
+```
+
+---
+### 🖌️ Apply palette as background
 ```dart
 Container(
   decoration: BoxDecoration(
@@ -72,8 +94,12 @@ flutter test
 ## 📁 Project structure
 ```
 lib/
-├── image_palette_extractor.dart         // Main export file
+├── image_palette_extractor.dart           # Main export
 └── src/
-    ├── image_loader.dart                // Loads and decodes images
-    └── palette_extractor.dart           // Color extraction logic
+    ├── core/
+    │   ├── color_analyzer.dart            # Color analysis logic
+    │   └── image_loader.dart              # Load images from URL or File
+    ├── utils/
+    │   └── ui_image_utils.dart            # Convert ui.Image to image.Image
+    └── palette_extractor.dart             # High-level entry point for consumers
 ```
