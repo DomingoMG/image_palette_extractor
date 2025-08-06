@@ -1,3 +1,9 @@
+## 1.0.1
+- ➕ Added `extractDominantColorFromPixels` method to support isolate-safe color extraction.
+- 🔁 Enables processing of raw RGBA `Uint8List` pixel data (e.g., from `ui.Image.toByteData`).
+- 🧵 Allows integration with `Isolate.run()` or `compute()` to avoid UI thread blocking.
+- 📖 Updated README with usage example for isolate-based color extraction.
+
 ## 1.0.0+1
 - Readme updated.
 
